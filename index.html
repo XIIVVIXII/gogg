@@ -170,11 +170,28 @@
         let data = getData();
         if(currentSubject !== "ทั้งหมด") data = data.filter(x => x.subject === currentSubject);
         if(currentHouse !== "ทั้งหมด") data = data.filter(x => x.house === currentHouse);
-        if(data.length === 0) return alert("ไม่มีรายชื่อ");
-        let text = `--- รายชื่อสอบ ${currentSubject} (${currentHouse}) ---\n\n`;
-        data.sort((a,b)=>a.rank-b.rank).forEach(i => { text += `ลำดับที่ ${i.rank} | ${i.name} | ${i.subject} | ${i.house}\n`; });
+        
+        if(data.length === 0) return alert("ไม่มีรายชื่อให้คัดลอก");
+
+        // จัดรูปแบบหัวข้อ
+        let text = `# ลำดับเข้าสอบ บ้าน ${currentHouse} \nวิชา : ${currentSubject}\n\n`;
+        text += "```\n";
+        text += "    ลำดับ          ชื่อ\n";
+        text += "─────────────────────────────────\n";
+        
+        // จัดเรียงและวนลูปข้อมูล
+        data.sort((a,b)=>a.rank-b.rank).forEach(i => {
+            // ใช้ padEnd/padStart เพื่อให้ลำดับชิดซ้าย/ขวาตามที่ต้องการ
+            let rankStr = String(i.rank).padStart(6, ' ');
+            text += `${rankStr}        ${i.name}\n`;
+            text += "─────────────────────────────────\n";
+        });
+        
+        text += "```";
+        
+        // คัดลอกลง Clipboard
         navigator.clipboard.writeText(text);
-        alert("คัดลอกเรียบร้อย!");
+        alert("คัดลอกรายชื่อสำหรับ Discord เรียบร้อยแล้วค่ะ!");
     }
 
     showPage('home');
