@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการรายชื่อผู้เข้าสอบ</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+        body { background-color: #f5f0eb; color: #2b2b2b; }
+        nav { background: #ffffff; padding: 15px 10px; text-align: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 100; }
+        nav button { padding: 10px 20px; margin: 4px; border: 1.5px solid #bdaba6; border-radius: 20px; cursor: pointer; font-weight: 600; color: #4e3f3b; background: #ffffff; }
+        .page { display: none; padding: 20px 12px; }
+        .active { display: block; }
+        .container { max-width: 700px; margin: auto; background: #ffffff; padding: 25px; border-radius: 20px; box-shadow: 0 8px 24px rgba(120, 100, 95, 0.15); }
+        h2 { font-weight: 600; color: #382e2c; margin-bottom: 20px; }
+        input, select { padding: 12px; margin: 6px 0 12px 0; width: 100%; border: 1.5px solid #c8b9b5; border-radius: 12px; background: #fefcfb; }
+        .btn-action { background: #446158; color: #ffffff; border: none; padding: 12px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: 600; }
+        .copy-btn { background: #eadecc; color: #5c4e4b; border: 1.5px solid #bdaba6; padding: 12px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: 600; margin-bottom: 15px; }
+        .filter-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .filter-btn { padding: 8px 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8em; background: #e3d5d1; }
+        .filter-btn.active { background: #446158; color: white; }
+        .filter-btn.house-active { background: #5c4742; color: white; }
+        .card { padding: 16px; margin: 12px 0; border-radius: 16px; border: 1.5px solid #e3d5d1; border-left: 8px solid #cfbebe; display: flex; justify-content: space-between; align-items: center; }
+        .card.IGNAILIS { border-left-color: #ff8585; }
+        .card.VIRIDELLE { border-left-color: #5ec779; }
+        .card.SYLPHIRA { border-left-color: #6ba7de; }
+        .card.FLARION { border-left-color: #cb7be3; }
+        .edit-select { width: auto; padding: 4px; font-size: 0.85em; }
+        .delete-btn { background: #ffe6e6; color: #bd1c1c; border: 1.5px solid #ffa6a6; padding: 6px 10px; border-radius: 8px; cursor: pointer; margin-left: 10px; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <button onclick="showPage('home')">หน้าแรก</button>
+    <button onclick="showPage('admin')">จัดการระบบ</button>
+</nav>
+
+<div id="home" class="page active">
+    <div class="container">
+        <h2>รายชื่อผู้เข้าสอบ</h2>
+        <label>เลือกดูตามวิชา:</label>
+        <div class="filter-group" id="subjectFilters"></div>
+        <label>เลือกดูตามบ้าน:</label>
+        <div class="filter-group" id="houseFilters"></div>
+        <button class="copy-btn" onclick="copyList()">📋 คัดลอกรายชื่อ</button>
+        <input type="text" id="search" placeholder="ค้นหาชื่อ..." onkeyup="renderList()">
+        <div id="list"></div>
+    </div>
+</div>
+
+<div id="admin" class="page">
+    <div class="container">
+        <h2>เพิ่มสมาชิกใหม่</h2>
+        <input type="number" id="rank" placeholder="ลำดับ">
+        <input type="text" id="name" placeholder="ชื่อ-นามสกุล">
+        <select id="house">
+            <option value="IGNAILIS">IGNAILIS</option>
+            <option value="VIRIDELLE">VIRIDELLE</option>
+            <option value="SYLPHIRA">SYLPHIRA</option>
+            <option value="FLARION">FLARION</option>
+        </select>
+        <select id="subject">
+            <option value="ศาสตร์การบิน">ศาสตร์การบิน</option>
+            <option value="ปรุงยาและสมุนไพร">ปรุงยาและสมุนไพร</option>
+            <option value="คาถาและเวทย์มนต์">คาถาและเวทย์มนต์</option>
+            <option value="การศึกษาและดูแลสัตว์วิเศษ">การศึกษาและดูแลสัตว์วิเศษ</option>
+            <option value="ศิลปะชนชั้นสูง">ศิลปะชนชั้นสูง</option>
+        </select>
+        <button class="btn-action" onclick="addMember()">บันทึกรายชื่อ</button>
+        
+        <button class="delete-btn" style="width: 100%; margin-top: 20px; background: #fff0f0; border: 1.5px solid #ffcccc;" onclick="deleteAllMembers()">
+            🗑️ ล้างรายชื่อทั้งหมด (ลบข้อมูลเดิมทิ้ง)
+        </button>
+
+        <hr style="margin: 20px 0;">
+        <div id="adminList"></div>
+    </div>
+</div>
+
+<script>
+    let currentSubject = localStorage.getItem("savedSubject") || "ทั้งหมด";
+    let currentHouse = localStorage.getItem("savedHouse") || "ทั้งหมด";
+    
+    const subjects = ["ทั้งหมด", "ศาสตร์การบิน", "ปรุงยาและสมุนไพร", "คาถาและเวทย์มนต์", "การศึกษาและดูแลสัตว์วิเศษ", "ศิลปะชนชั้นสูง"];
+    const houses = ["ทั้งหมด", "IGNAILIS", "VIRIDELLE", "SYLPHIRA", "FLARION"];
+
+    function getData() { return JSON.parse(localStorage.getItem("members") || "[]"); }
+
+    function showPage(page){
+        document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+        document.getElementById(page).classList.add("active");
+        renderUI();
+    }
+
+    function renderUI() {
+        document.getElementById("subjectFilters").innerHTML = subjects.map(s => 
+            `<button class="filter-btn ${currentSubject === s ? 'active' : ''}" onclick="setFilter('sub', '${s}')">${s}</button>`).join('');
+        document.getElementById("houseFilters").innerHTML = houses.map(h => 
+            `<button class="filter-btn ${currentHouse === h ? 'house-active' : ''}" onclick="setFilter('house', '${h}')">${h}</button>`).join('');
+        renderList();
+        renderAdmin();
+    }
+
+    function setFilter(type, val) {
+        if(type === 'sub') { currentSubject = val; localStorage.setItem("savedSubject", val); }
+        else { currentHouse = val; localStorage.setItem("savedHouse", val); }
+        renderUI();
+    }
+
+    function addMember(){
+        let data = getData();
+        let name = document.getElementById("name").value;
+        if(!name) return alert("กรุณากรอกชื่อ");
+        data.push({ id: Date.now(), rank: Number(document.getElementById("rank").value), name, 
+                    house: document.getElementById("house").value, subject: document.getElementById("subject").value });
+        localStorage.setItem("members", JSON.stringify(data));
+        document.getElementById("name").value = "";
+        renderUI();
+    }
+
+    function deleteAllMembers() {
+        if(confirm("คุณต้องการลบรายชื่อทั้งหมดใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) {
+            localStorage.removeItem("members");
+            renderUI();
+            alert("ลบข้อมูลทั้งหมดเรียบร้อยแล้วค่ะ");
+        }
+    }
+
+    function updateSubject(id, newSubject){
+        let data = getData().map(item => item.id === parseInt(id) ? {...item, subject: newSubject} : item);
+        localStorage.setItem("members", JSON.stringify(data));
+        renderAdmin();
+        renderList();
+    }
+
+    function deleteMember(id){
+        let data = getData().filter(x => x.id !== parseInt(id));
+        localStorage.setItem("members", JSON.stringify(data));
+        renderAdmin();
+        renderList();
+    }
+
+    function renderList(){
+        let data = getData();
+        if(currentSubject !== "ทั้งหมด") data = data.filter(x => x.subject === currentSubject);
+        if(currentHouse !== "ทั้งหมด") data = data.filter(x => x.house === currentHouse);
+        let search = document.getElementById("search").value.toLowerCase();
+        data = data.filter(x => x.name.toLowerCase().includes(search));
+        document.getElementById("list").innerHTML = data.sort((a,b)=>a.rank-b.rank).map(item => `
+            <div class="card ${item.house}"><div><h3>ลำดับ ${item.rank} | ${item.subject}</h3><p>${item.name}</p></div></div>
+        `).join('') || "ไม่มีข้อมูล";
+    }
+
+    function renderAdmin(){
+        document.getElementById("adminList").innerHTML = getData().sort((a,b)=>a.rank-b.rank).map(item => `
+            <div class="card ${item.house}">
+                <div><strong>${item.rank}. ${item.name}</strong><br>
+                    <select class="edit-select" onchange="updateSubject(${item.id}, this.value)">
+                        ${subjects.filter(s => s !== "ทั้งหมด").map(s => `<option value="${s}" ${item.subject === s ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                </div>
+                <button class="delete-btn" onclick="deleteMember(${item.id})">ลบ</button>
+            </div>
+        `).join('');
+    }
+
+    function copyList() {
+        let data = getData();
+        if(currentSubject !== "ทั้งหมด") data = data.filter(x => x.subject === currentSubject);
+        if(currentHouse !== "ทั้งหมด") data = data.filter(x => x.house === currentHouse);
+        if(data.length === 0) return alert("ไม่มีรายชื่อ");
+        let text = `--- รายชื่อสอบ ${currentSubject} (${currentHouse}) ---\n\n`;
+        data.sort((a,b)=>a.rank-b.rank).forEach(i => { text += `ลำดับที่ ${i.rank} | ${i.name} | ${i.subject} | ${i.house}\n`; });
+        navigator.clipboard.writeText(text);
+        alert("คัดลอกเรียบร้อย!");
+    }
+
+    showPage('home');
+</script>
+</body>
+</html>
